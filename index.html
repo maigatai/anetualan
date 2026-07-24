@@ -1,0 +1,918 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <title>System Terminal</title>
+
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        html,
+        body {
+            width: 100%;
+            height: 100%;
+            overflow: hidden;
+            background: #000;
+            font-family: "Courier New", monospace;
+        }
+
+        /* =========================================
+           MATRIX BACKGROUND
+        ========================================= */
+
+        #matrix {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            overflow: hidden;
+            background: #000;
+            z-index: 1;
+        }
+
+        .matrix-column {
+            position: absolute;
+            top: -150%;
+            color: #00ff41;
+            font-size: 14px;
+            line-height: 18px;
+            white-space: pre;
+            text-shadow:
+                0 0 5px #00ff41,
+                0 0 10px #00ff41;
+
+            animation-name: matrixFall;
+            animation-timing-function: linear;
+            animation-iteration-count: infinite;
+        }
+
+        @keyframes matrixFall {
+
+            0% {
+                transform: translateY(-100%);
+                opacity: 0;
+            }
+
+            10% {
+                opacity: 1;
+            }
+
+            90% {
+                opacity: 1;
+            }
+
+            100% {
+                transform: translateY(220%);
+                opacity: 0;
+            }
+
+        }
+
+
+        /* =========================================
+           DARK OVERLAY
+        ========================================= */
+
+        .overlay {
+            position: fixed;
+            inset: 0;
+            z-index: 2;
+            pointer-events: none;
+
+            background:
+                radial-gradient(
+                    circle at center,
+                    rgba(0, 40, 0, 0.15),
+                    rgba(0, 0, 0, 0.85)
+                );
+        }
+
+
+        /* =========================================
+           FULLSCREEN TERMINAL
+        ========================================= */
+
+        .terminal {
+
+            position: fixed;
+
+            top: 0;
+            left: 0;
+
+            width: 100vw;
+            height: 100vh;
+
+            padding: 30px;
+
+            z-index: 5;
+
+            color: #00ff41;
+
+            background:
+                rgba(0, 0, 0, 0.45);
+
+            overflow: hidden;
+
+            text-shadow:
+                0 0 5px #00ff41;
+        }
+
+
+        /* =========================================
+           TERMINAL HEADER
+        ========================================= */
+
+        .terminal-header {
+
+            display: flex;
+
+            justify-content: space-between;
+
+            align-items: center;
+
+            padding-bottom: 15px;
+
+            margin-bottom: 15px;
+
+            border-bottom:
+                1px solid
+                rgba(0, 255, 65, 0.5);
+
+            color: #00ff41;
+
+            font-size: 14px;
+        }
+
+        .status {
+
+            color: #00ff41;
+
+            animation:
+                blinkStatus
+                1s infinite;
+        }
+
+        @keyframes blinkStatus {
+
+            0% {
+                opacity: 1;
+            }
+
+            50% {
+                opacity: 0.4;
+            }
+
+            100% {
+                opacity: 1;
+            }
+
+        }
+
+
+        /* =========================================
+           TERMINAL CONTENT
+        ========================================= */
+
+        #terminalContent {
+
+            height: calc(100vh - 120px);
+
+            overflow: hidden;
+
+            font-size: 14px;
+
+            line-height: 1.7;
+
+            color: #00ff41;
+        }
+
+
+        .terminal-line {
+
+            white-space: nowrap;
+
+            animation:
+                textAppear
+                0.2s
+                ease-out;
+
+        }
+
+        @keyframes textAppear {
+
+            from {
+
+                opacity: 0;
+
+                transform:
+                    translateX(-10px);
+
+            }
+
+            to {
+
+                opacity: 1;
+
+                transform:
+                    translateX(0);
+
+            }
+
+        }
+
+
+        .highlight {
+
+            color: #ffffff;
+
+            text-shadow:
+                0 0 8px
+                #ffffff;
+        }
+
+
+        .warning {
+
+            color: #ffff00;
+
+            text-shadow:
+                0 0 8px
+                #ffff00;
+        }
+
+
+        .error {
+
+            color: #ff3333;
+
+            text-shadow:
+                0 0 8px
+                #ff3333;
+        }
+
+
+        /* =========================================
+           CURSOR
+        ========================================= */
+
+        .cursor {
+
+            display: inline-block;
+
+            width: 9px;
+
+            height: 17px;
+
+            margin-left: 5px;
+
+            background:
+                #00ff41;
+
+            vertical-align:
+                middle;
+
+            box-shadow:
+                0 0 8px
+                #00ff41;
+
+            animation:
+                cursorBlink
+                0.7s
+                infinite;
+        }
+
+        @keyframes cursorBlink {
+
+            0% {
+                opacity: 1;
+            }
+
+            50% {
+                opacity: 0;
+            }
+
+            100% {
+                opacity: 1;
+            }
+
+        }
+
+
+        /* =========================================
+           SCANLINES
+        ========================================= */
+
+        .scanlines {
+
+            position: fixed;
+
+            inset: 0;
+
+            z-index: 10;
+
+            pointer-events: none;
+
+            background:
+
+                repeating-linear-gradient(
+
+                    to bottom,
+
+                    rgba(
+                        0,
+                        255,
+                        65,
+                        0.03
+                    ),
+
+                    rgba(
+                        0,
+                        255,
+                        65,
+                        0.03
+                    )
+                    1px,
+
+                    transparent
+                    1px,
+
+                    transparent
+                    4px
+
+                );
+
+        }
+
+
+        /* =========================================
+           GLITCH EFFECT
+        ========================================= */
+
+        .glitch {
+
+            animation:
+                glitchAnimation
+                3s
+                infinite;
+
+        }
+
+        @keyframes glitchAnimation {
+
+            0% {
+                transform:
+                    translate(0);
+            }
+
+            2% {
+                transform:
+                    translate(-2px, 1px);
+            }
+
+            4% {
+                transform:
+                    translate(2px, -1px);
+            }
+
+            6% {
+                transform:
+                    translate(0);
+            }
+
+            100% {
+                transform:
+                    translate(0);
+            }
+
+        }
+
+
+        /* =========================================
+           MOBILE
+        ========================================= */
+
+        @media
+        (max-width: 600px) {
+
+            .terminal {
+
+                padding: 15px;
+
+            }
+
+            .terminal-header {
+
+                font-size: 11px;
+
+            }
+
+            #terminalContent {
+
+                font-size: 11px;
+
+                line-height: 1.6;
+
+            }
+
+            .matrix-column {
+
+                font-size: 11px;
+
+                line-height: 14px;
+
+            }
+
+        }
+
+    </style>
+
+</head>
+
+
+<body>
+
+
+<!-- =========================================
+     MATRIX BACKGROUND
+========================================= -->
+
+<div id="matrix"></div>
+
+
+<!-- DARK OVERLAY -->
+
+<div class="overlay"></div>
+
+
+<!-- =========================================
+     FULLSCREEN TERMINAL
+========================================= -->
+
+<div class="terminal glitch">
+
+
+    <!-- HEADER -->
+
+    <div class="terminal-header">
+
+        <div>
+
+            @system:
+            <span class="highlight">
+                SEO ANETUALAN
+            </span>
+
+        </div>
+
+        <div class="status">
+
+            ● SYSTEM ONLINE
+
+        </div>
+
+    </div>
+
+
+    <!-- TERMINAL LOG -->
+
+    <div id="terminalContent"></div>
+
+
+    <!-- CURSOR -->
+
+    <span class="cursor"></span>
+
+
+</div>
+
+
+<!-- SCANLINES -->
+
+<div class="scanlines"></div>
+
+
+
+<script>
+
+
+/* =========================================
+   MATRIX CHARACTER SET
+========================================= */
+
+const characters =
+"01ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz@#$%^&*()_+-=[]{}<>?/";
+
+
+/* =========================================
+   CREATE MATRIX
+========================================= */
+
+const matrix =
+document.getElementById("matrix");
+
+
+function createMatrixColumn() {
+
+
+    const column =
+    document.createElement("div");
+
+
+    column.className =
+    "matrix-column";
+
+
+    /* RANDOM POSITION */
+
+    column.style.left =
+    Math.random() * 100 + "%";
+
+
+    /* RANDOM SPEED */
+
+    column.style.animationDuration =
+    (4 + Math.random() * 10) + "s";
+
+
+    /* RANDOM DELAY */
+
+    column.style.animationDelay =
+    Math.random() * 8 + "s";
+
+
+    /* RANDOM SIZE */
+
+    column.style.fontSize =
+    (10 + Math.random() * 10) + "px";
+
+
+    /* RANDOM TEXT */
+
+    let text = "";
+
+
+    for (
+        let i = 0;
+        i < 80;
+        i++
+    ) {
+
+
+        text +=
+
+        characters.charAt(
+
+            Math.floor(
+
+                Math.random()
+                *
+                characters.length
+
+            )
+
+        )
+
+        + "\n";
+
+
+    }
+
+
+    column.textContent =
+    text;
+
+
+    matrix.appendChild(
+        column
+    );
+
+}
+
+
+/* CREATE 80 COLUMNS */
+
+for (
+    let i = 0;
+    i < 80;
+    i++
+) {
+
+    createMatrixColumn();
+
+}
+
+
+
+/* =========================================
+   TERMINAL SYSTEM
+========================================= */
+
+const terminalContent =
+document.getElementById(
+    "terminalContent"
+);
+
+
+/* TERMINAL MESSAGES */
+
+const messages = [
+
+    "Initializing secure system protocol...",
+
+    "Loading encrypted modules...",
+
+    "Establishing network connection...",
+
+    "Scanning active nodes...",
+
+    "Analyzing data packets...",
+
+    "Processing encrypted information...",
+
+    "Verifying system integrity...",
+
+    "Checking network routes...",
+
+    "Synchronizing remote server...",
+
+    "Receiving incoming data...",
+
+    "Decrypting communication channel...",
+
+    "System firewall activated...",
+
+    "Security protocol initialized...",
+
+    "Connection successfully established.",
+
+    "Monitoring system activity...",
+
+    "Waiting for new incoming data..."
+
+];
+
+
+
+/* RANDOM CODE */
+
+function generateRandomCode() {
+
+
+    return Math.random()
+
+        .toString(36)
+
+        .substring(
+            2,
+            14
+        )
+
+        .toUpperCase();
+
+
+}
+
+
+
+/* RANDOM IP */
+
+function generateRandomIP() {
+
+
+    return [
+
+        Math.floor(
+            Math.random()
+            * 255
+        ),
+
+        Math.floor(
+            Math.random()
+            * 255
+        ),
+
+        Math.floor(
+            Math.random()
+            * 255
+        ),
+
+        Math.floor(
+            Math.random()
+            * 255
+        )
+
+    ].join(".");
+
+
+}
+
+
+
+/* CURRENT TIME */
+
+function getTime() {
+
+
+    const now =
+    new Date();
+
+
+    return now
+        .toLocaleTimeString();
+
+}
+
+
+
+/* ADD TERMINAL LINE */
+
+function addTerminalLine() {
+
+
+    const line =
+    document.createElement(
+        "div"
+    );
+
+
+    line.className =
+    "terminal-line";
+
+
+    const randomMessage =
+
+    messages[
+
+        Math.floor(
+
+            Math.random()
+            *
+            messages.length
+
+        )
+
+    ];
+
+
+    const randomNumber =
+
+    Math.floor(
+
+        Math.random()
+        *
+        99999
+
+    );
+
+
+    line.innerHTML =
+
+    `[${getTime()}] `
+
+    +
+
+    `<span class="highlight">`
+
+    +
+
+    randomMessage
+
+    +
+
+    `</span>`
+
+    +
+
+    ` :: NODE_`
+
+    +
+
+    randomNumber
+
+    +
+
+    ` :: IP_`
+
+    +
+
+    generateRandomIP()
+
+    +
+
+    ` :: `
+
+    +
+
+    generateRandomCode();
+
+
+    terminalContent.appendChild(
+        line
+    );
+
+
+    /* LIMIT LOG */
+
+    if (
+        terminalContent
+        .children
+        .length > 35
+    ) {
+
+
+        terminalContent
+        .removeChild(
+
+            terminalContent
+            .firstChild
+
+        );
+
+
+    }
+
+
+}
+
+
+
+/* =========================================
+   INITIAL LOG
+========================================= */
+
+for (
+    let i = 0;
+    i < 20;
+    i++
+) {
+
+    addTerminalLine();
+
+}
+
+
+
+/* =========================================
+   CONTINUOUS TERMINAL LOG
+========================================= */
+
+setInterval(
+
+    addTerminalLine,
+
+    300
+
+);
+
+
+
+/* =========================================
+   RANDOM MATRIX REPLACEMENT
+========================================= */
+
+setInterval(
+
+    () => {
+
+
+        const columns =
+        document.querySelectorAll(
+            ".matrix-column"
+        );
+
+
+        if (
+            columns.length > 100
+        ) {
+
+
+            columns[0]
+            .remove();
+
+
+        }
+
+
+        createMatrixColumn();
+
+
+    },
+
+    5000
+
+);
+
+
+</script>
+
+
+</body>
+
+</html>
